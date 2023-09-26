@@ -236,7 +236,7 @@ def main(game_level):
     pygame.display.update()
 
     ## CONTROL GAME SPEED   ** OK to change  **
-    delay_time = 400
+    delay_time = 4
     # game delay in milliseconds between cycles
 
     move_count = 5  # track number of moves
@@ -256,11 +256,13 @@ def main(game_level):
 
                 f"--------------------------------------\n"
                 f"RESULTS ***** {result_str}\n"
+                  f"Room Dimensions: {robo_vac.room_width}w x "
+                  f"{robo_vac.room_height}h\n"
                   f"{robo_vac.name} ID={robo_vac.id} {get_date_time()}"
                   f"\nLevel: {room.game_level}  Coverage: "
                   f"{((len(room.clean_set)/room.max_tiles)*100):.1f}%\n"
                   f"Cycles: {move_count} Tiles Cleaned: "
-                  f"{len(room.clean_set)} Max Tiles: {room.max_tiles}"
+                  f"{len(room.clean_set)} Max Tiles: {room.max_tiles} "
                   f"Total Tiles {room.max_tiles}\n"
                   f"Efficiency: {(room.max_tiles/move_count):.2f}"
                   )
