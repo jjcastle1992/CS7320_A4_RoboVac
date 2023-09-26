@@ -13,10 +13,14 @@ import math
 import numpy as np
 
 class RoboVac:
-    def __init__(self, config_list):
+    def __init__(self, config_list, clean_set):
         self.room_width, self.room_height = config_list[0]
         self.pos = config_list[1]   # starting position of vacuum
         self.block_list = config_list[2]   # blocks list (x,y,width,ht)
+        self.explored_list = clean_set
+        self.unvisited_list = []
+        self.start_corner_found = False
+        self.last_move = None
 
         # fill in with your info
         self.name = "James Castle"
@@ -36,13 +40,31 @@ class RoboVac:
         # Goal: Simply get 100% Coverage in <= 400 moves
         # Plan:
         # Start basic (can we solve a room?)
+        # 0. Check to see if we're already in the corner. If yes, skip
+        #    to step 3.
+        in_the_corner = self.at_corner(current_pos)
+        if((in_the_corner) and (self.start_corner_found == False)):
+            self.start_corner_found = True
         # 1. Find closest wall (vertical or horz), go there.
         # 2. Find closest perp wall (corner)
-        wall_move, corner_move = self.find_corner(current_pos)
+        if(not self.start_corner_found):
+            next_move = self.find_corner(current_pos)
         # 3. Once in corner, pick 1 of 2 legal directions.
         #    For later: pick a path that has the longest path of
         #    Unvisited nodes (weight closest to 0)
+        legal_moves = self.legal_move_check(current_pos)
+        if(self.last_move in legal_moves):
+            next_move = self.last_move
         # 4. Proceed until you hit boundary.
+        else:
+            print('BUMP!')
+            # pick left or right
+            repeat_moves = self.visited_before(current_pos, legal_moves)
+            if((3 not in repeat_moves) and (3 in legal_moves)):
+                next_move = 3   # go left if not already been and legal
+            else:
+                next_move = 1  # else, go right
+
         # 5. Pick legal move that does not retrace steps, and move once.
         # 7. Invert direction from Step 4.
         # 8. Move until hit next wall.
@@ -66,18 +88,92 @@ class RoboVac:
         # 1. Shortest path to nearest unvisited node using Manhattan
         #    distance.
         # 2. Strategies to avoid getting stuck on furniture
+        self.last_move = next_move
 
-        return random.choice([0,1,2,3])
+        return next_move
+
+
+    def visited_before(self, current_position, legal_moves):
+        """
+        Checks to see which legal moves result in re-tracing of steps
+        :param current_position:
+        :param legal_moves:
+        :return: A list of moves that result in step retracing.
+        """
+        x, y = current_position
+        up = (x, y - 1)
+        down = (x, y + 1)
+        left = (x - 1, y)
+        right = (x + 1, y)
+        repeat_moves = []
+        if(0 in legal_moves):  # check if Up has been visited
+            if(up in self.explored_list):
+                repeat_moves.append(0)
+        if(2 in legal_moves):  # check if Down has been visited
+            if(down in self.explored_list):
+                repeat_moves.append(2)
+        if(3 in legal_moves):  # check if Left has been visited
+            if(left in self.explored_list):
+                repeat_moves.append(3)
+        if(1 in legal_moves):  # check if Right has been visited
+            if(right in self.explored_list):
+                repeat_moves.append(1)
+
+        return repeat_moves
+
+    def legal_move_check(self, current_pos):
+        """
+        Check for valid moves.
+        :param current_pos: tuple consisting of x,y coordinate position
+        of robot.
+        :return: a list of legal moves
+        """
+        legal_moves = []
+        x, y = current_pos
+        # Check left
+        if((x - 1) >= 0):
+            legal_moves.append(3)  # add left to legal moves
+
+        # Check right
+        if ((x + 1) <= (self.room_width - 1)):
+            legal_moves.append(1)  # add right to legal moves
+        # check up
+        if ((y - 1) >= 0):
+            legal_moves.append(0)  # add up to legal moves
+        # check down
+        if ((y + 1) <= (self.room_height - 1)):
+            legal_moves.append(0)  # add up to legal moves
+
+        return legal_moves
+
+    def at_corner(self, current_pos):
+        """
+        Determines if we are at a corner
+        :param current_pos: tuple consisting of x,y coordinate position
+        of robot.
+        :return: bool in_corner. True if already in a corner. False if
+        not.
+        """
+        in_corner = False
+        # Possible Corners (x, y)
+        top_left = (0, 0)
+        top_right = (self.room_width - 1, 0)
+        bot_left = (0, self.room_height - 1)
+        bot_right = (self.room_width - 1, self.room_height - 1)
+        corner_list = [top_left, top_right, bot_left, bot_right]
+        for corners in corner_list:
+            if corners == current_pos:
+                in_corner = True
+
+        return in_corner
 
     def find_corner(self, current_pos):
         """
-        Finds nearest wall, and then nearest corner.
+        Finds nearest corner when we're not in already in the corner.
         :param current_pos: tuple consisting of x,y coordinate position
         of robot.
-        :return: ordered moveset to get robot to nearest corner.
+        :return: next move
         """
-        first_move = -1
-        second_move = -1
 
         # Possible Corners (x, y)
         top_left = (0, 0)
@@ -95,33 +191,36 @@ class RoboVac:
         possible_corners = [tl_euclid_dist, tr_euclid_dist,
                             bl_euclid_dist, br_euclid_dist]
         closest_corner = math.inf
-        corner_coord = (-100, -100)
         # find shortest distance
-        for count, corners in enumerate(possible_corners):
+        corner_idx = 0
+        for idx, corners in enumerate(possible_corners):
             if corners < closest_corner:
                 closest_corner = corners
-                count += 1
-                corner_coord = corner_list[count]
+                corner_idx = idx
+
+        corner_coord = corner_list[corner_idx]
         # determine x dist, y dist, to sort moves from current pos
         # -> corner.
-        moves_needed = corner_coord - current_pos
+        moves_needed = tuple(map(lambda i, j: i - j, corner_coord,
+                                 current_pos))
         horz_moves, vert_moves = moves_needed
-        if(abs(horz_moves) < abs(vert_moves)):
-            if (horz_moves < 0):
-                first_move = 3  # go left
-                second_move
-            else:
-                first_move = 1  # go right
+
+        if (vert_moves < 0):
+            vert_move = 0  # go up
         else:
-            if(vert_moves < 0):
-                first_move = 2  # go down
-            else:
-                first_move = 0  # go up
+            vert_move = 2  # go down
 
+        if(horz_moves < 0):
+            horz_move = 3  # go left
+        else:
+            horz_move = 1  # go right
 
+        if (abs(horz_moves) < abs(vert_moves)):
+            next_move = horz_move
+        else:
+            next_move = vert_move
 
-
-        return 1, 0  # bogus for now
+        return next_move
 
     def euclidean_distance(self, ref_coords, current_pos):
         """
