@@ -222,7 +222,7 @@ def main(game_level):
 
     # create the Robot Vacuum AI : pass in configuration
     config_list = room.get_room_config()
-    robo_vac = RoboVac(config_list)
+    robo_vac = RoboVac(config_list, room.clean_set)
 
     # set up the screen display ----------------
     SCREEN = pygame.display.set_mode((room.window_width, \
@@ -236,7 +236,7 @@ def main(game_level):
     pygame.display.update()
 
     ## CONTROL GAME SPEED   ** OK to change  **
-    delay_time = 4
+    delay_time = 40
     # game delay in milliseconds between cycles
 
     move_count = 5  # track number of moves
