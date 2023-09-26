@@ -92,6 +92,21 @@ class RoboVac:
 
         return next_move
 
+    def priority_queue(self):
+        #  0 = unexplored;
+        #  1 = explored
+        #  10 = blocked
+        pass
+
+
+    def manhattan_dist(self):
+        pass
+
+    def room_state_tracker_np(self):
+        room_state = np.zeros((self.room_height, self.room_width))
+        # look at coordinate pairs in clean list and set clean = 1
+        # find obstacle coordinates and set equal to 10.
+        # define goal board (1s everywhere except obstacle)
 
     def visited_before(self, current_position, legal_moves):
         """
