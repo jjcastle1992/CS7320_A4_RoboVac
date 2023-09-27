@@ -11,130 +11,236 @@ exec will : create instance and in game loop call : nextMove()  ??
 import random
 import math
 import numpy as np
+from queue import PriorityQueue
+import copy
 
 class RoboVac:
     def __init__(self, config_list, clean_set):
         self.room_width, self.room_height = config_list[0]
-        self.pos = config_list[1]   # starting position of vacuum
+        self.room_state = np.zeros((self.room_height, self.room_width))
+        self.goal_state = np.ones((self.room_height, self.room_width))
+        self.pos = config_list[1]  # starting position of vacuum
         self.block_list = config_list[2]   # blocks list (x,y,width,ht)
         self.explored_list = clean_set
         self.unvisited_list = []
         self.start_corner_found = False
         self.last_move = None
 
+
+        # test purposes - highlight robot position
+        y, x = self.pos
+        self.room_state[x][y] = 99
+
+
         # fill in with your info
         self.name = "James Castle"
         self.id = "29248132"
 
+        # generate goal state
+        self.place_furniture()
+
+    def place_furniture(self):
+        """Method sets value for any furniture in the block list on the
+        room_state and goal_state boards. Furniture weighted as 100.
+        :return: void function
+        """
+        self.room_state.astype(int)
+        for furniture in self.block_list:
+            # get furniture dims
+            x, y, width, height = furniture
+            # set board pieces in range to 100 (blocked)
+            self.room_state[x][y] = 100
+            for blocks in range(width):
+                for cubes in range(height):
+                    self.room_state[x + cubes][y + blocks] = 100
+
+        self.goal_state.astype(int)
+        for furniture in self.block_list:
+            # get furniture dims
+            x, y, width, height = furniture
+            # set board pieces in range to 100 (blocked)
+            self.goal_state[x][y] = 100
+            for blocks in range(width):
+                for cubes in range(height):
+                    self.goal_state[x + cubes][y + blocks] = 100
+
+        print('Furniture placed')
+
     def get_next_move(self, current_pos):  # called by PyGame code
         # Return a direction for the vacuum to move
         # random walk 0=north # 1=east 2=south 3=west
-        next_move = None
 
         up = 0
         down = 2
         left = 3
         right = 1
 
-        # What the vacuum knows
-        # 1. Room dimensions
-        # 2. Starting Position
-        # 3. Block lists
+        move_list = self.next_move_manhat(self.room_state)
+        next_move = 0
 
-        # V1.0 Strat
-        # Goal: Simply get 100% Coverage in <= 400 moves
-        # Plan:
-        # Start basic (can we solve a room?)
-        # 0. Check to see if we're already in the corner. If yes, skip
-        #    to step 3.
-        in_the_corner = self.at_corner(current_pos)
-        if((in_the_corner) and (self.start_corner_found == False)):
-            self.start_corner_found = True
-        # 1. Find closest wall (vertical or horz), go there.
-        # 2. Find closest perp wall (corner)
-        if(not self.start_corner_found):
-            next_move = self.find_corner(current_pos)
-        # 3. Once in corner, pick 1 of 2 legal directions.
-        #    For later: pick a path that has the longest path of
-        #    Unvisited nodes (weight closest to 0)
-        legal_moves = self.legal_move_check(current_pos)
-        if(self.last_move in legal_moves):
-            next_move = self.last_move
-        # 4. Proceed until you hit boundary.
-        elif(self.last_move):
-            print('BUMP!')
-            # pick next best move
-            repeat_moves = self.visited_before(current_pos, legal_moves)
-            if(not next_move):
-                for move in legal_moves:
-                    if(move not in repeat_moves):
-                        next_move = move
-
-            if(next_move in repeat_moves):  # check if corner in moves
-                # find a move that isn't repeated
-                for moves in legal_moves:
-                    if not next_move:
-                        if(moves not in repeat_moves):
-                            next_move = moves
-                            break
-
-        # 5. Pick legal move that does not retrace steps, and move once.
-        # 7. Invert direction from Step 4.
-        # 8. Move until hit next wall.
-        # 9. Repeat Step 5.
-        # 11.Invert direction from Step 7. (repeat step 7ish)
-        # 12. Repeat Step 5, 11ish until board clean.
-
-        # Problems to solve:
-        # 1. Track where we've been (to avoid retracing steps):
-        #    1.1. Weight visited nodes to discentivize (but not block)
-        #    travel to already visit nodes.
-        # 2. Consider dividing room into smaller sections
-        #    2.1. Clean closest quadrant first.
-        #    2.2. Pick next closest quadrant, clean
-        #    2.3. Repeat until all quadrants clean
-        # 3. For RoboVac 0, we know there is no furniture, so can borrow
-        #    real vac logic such as a back and forth pattern snake
-        #    pattern
-
-        # Strategies to consider
-        # 1. Shortest path to nearest unvisited node using Manhattan
-        #    distance.
-        # 2. Strategies to avoid getting stuck on furniture
-        if(next_move):
-            self.last_move = next_move
 
         return next_move
 
-    def start_state(self):
+
+
+    def next_move_manhat(self, board):
         """
-        Numpy array start state w/ 0 (uncleaned) and 100(obtacle) values
-        :return:
+        Method returns ordered list of cleaning steps as a list of
+        boards.
+        :param board: 2d list of ints containing current game board
+        :return: list of game moves to cleaned room.
         """
-        pass
+        possible_moves = PriorityQueue()
 
-    def goal_state(self):
+        queue = [[board]]
+
+        # Kick off BFS (Manhattan)
+        while queue:
+            path = queue.pop(0)
+            vertex = path[len(path) - 1]
+
+            child_boards = self.get_child_boards_list(vertex, self.pos)
+
+            # need to figure out how best to unpack tuples into a list
+
+            next_node_list = [x for x in child_boards[str(vertex)]
+                              if str(x) not in set(str(path))]
+
+            # Create Manhattan Distance Priority Queue
+            for node in next_node_list:
+                manhattan_sum = self.manhattan_dist(node,
+                                                    self.goal_state)
+                possible_moves.put((manhattan_sum, node))
+
+            # Visit the Children in our Priority Queue
+            while not (possible_moves.empty()):
+                priority, next_node = possible_moves.get()
+
+                # Check for victory conditions or append path with node
+                if next_node == self.goal_state:
+                    return [path + [next_node]]
+                else:
+                    queue.append(path + [next_node])
+
+    def manhattan_dist(self, board, goal):
         """
-        Numpy array goal state with 1 (cleaned) and 100 (obstacle)values
-        :return:
+        This function calculates the Manhattan Sum for a given board
+        based on the variance in tile distance of the current board vs
+        the goal board.
+        :param board: 2d list of ints containing the board to give a
+        Manhattan sum.
+        :param goal: 2d list of ints containing goal state game board
+        :return: float that is the sum of all Manhattan distances for
+        the target board vs goal board
         """
-        pass
+        manhattan_sum = 0.0
+        # customizing in-case goal board is not 1, 2, 3, 4...etc.
 
-    def priority_queue(self):
-        #  0 = unexplored;
-        #  1 = explored
-        #  100 = blocked
-        pass
+        # Calculate our Manhattan Sum
+        for row_idx, row in enumerate(goal):
+            for col_idx, element in enumerate(row):
+                current_target = goal[row_idx][col_idx]
+                board_coord, goal_coord = self.coordinate_finder(
+                    current_target,
+                    board, goal)
+                x1, y1 = board_coord
+                x2, y2 = goal_coord
+                manhattan_dist = (abs(x1 - x2) + abs(y1 - y2))
+                manhattan_sum += manhattan_dist
 
+        return manhattan_sum
 
-    def manhattan_dist(self):
-        pass
+    def coordinate_finder(self, target_val, current_board, goal_board):
+        """
+        Finds coordinates of a target value (int) in 2 boards:
+            1. Current Board
+            2. Goal Board
+        :param target_val: int to search for in the current and goal boards
+        :param current_board: 2d list of ints containing the current board
+        :param goal_board: 2d list of ints containing the goal board
+        :return: tuple containing 2 ints
+        """
+        current_board_coords = (-1, -1)
+        goal_board_coords = (-1, -1)
 
-    def room_state_tracker_np(self):
-        room_state = np.zeros((self.room_height, self.room_width))
-        # look at coordinate pairs in clean list and set clean = 1
-        # find obstacle coordinates and set equal to 10.
-        # define goal board (1s everywhere except obstacle)
+        # find current board coordinates for the target value
+        for row_idx, row in enumerate(current_board):
+            for col_idx, element in enumerate(row):
+                if element == target_val:
+                    current_board_coords = (row_idx, col_idx)
+
+        # find goal board coordinates for the target value
+        for row_idx, row in enumerate(goal_board):
+            for col_idx, element in enumerate(row):
+                if element == target_val:
+                    goal_board_coords = (row_idx, col_idx)
+
+        return current_board_coords, goal_board_coords
+
+    def get_child_boards_list(self, board, current_pos):
+        """
+        This function gets ALL child boards for a given parent board
+        :param board: 2d list of ints - A game board (RxC) matrix
+        :param current_pos: tuple consisting of x,y coordinate position
+        of robot.
+        :return: A list of ALL possible child boards of the parent
+        """
+
+        list_of_child_boards = {}
+        up = 0
+        down = 2
+        left = 3
+        right = 1
+        col, row = current_pos
+
+        # determine if we can move up (Zero not in bottom Row)
+        up_board = copy.deepcopy(board)
+
+        # not 1 move up away from a block (edge of board or furniture)
+        legal_moves = self.legal_move_check(current_pos)
+        if(up in legal_moves):
+            up_board[row - 1][col] = 1
+            up_tup = (up_board, up)  # to return move with board
+            # add up_board to the list of children
+            if str(board) in list_of_child_boards.keys():
+                list_of_child_boards[str(board)].append(up_tup)
+            else:
+                list_of_child_boards[str(board)] = up_tup
+
+        # determine if we can move down (Zero not in top row)
+        down_board = copy.deepcopy(board)
+        if(down in legal_moves):
+            down_board[row + 1][col] = 1
+            down_tup = (down_board, down)
+            # add down_board to the list of children
+            if str(board) in list_of_child_boards.keys():
+                list_of_child_boards[str(board)].append(down_tup)
+            else:
+                list_of_child_boards[str(board)] = down_tup
+
+        # determine if we can move left (Zero cannot be in last column)
+        left_board = copy.deepcopy(board)
+        if(left in legal_moves):
+            left_board[row][col - 1] = 1
+            left_tup = (left_board, left)
+            # add left_board to the list of children
+            if str(board) in list_of_child_boards.keys():
+                list_of_child_boards[str(board)].append(left_tup)
+            else:
+                list_of_child_boards[str(board)] = left_tup
+
+        # determine if we can move right (Zero cannot be in first column)
+        right_board = copy.deepcopy(board)
+        if(right in legal_moves):
+            right_board[row][col + 1] = 1
+            right_tup = (right_board, right)
+            # add right_board to the list of children
+            if str(board) in list_of_child_boards.keys():
+                list_of_child_boards[str(board)].append(right_tup)
+            else:
+                list_of_child_boards[str(board)] = right_tup
+
+        return list_of_child_boards
 
     def visited_before(self, current_position, legal_moves):
         """
@@ -174,18 +280,22 @@ class RoboVac:
         legal_moves = []
         x, y = current_pos
         # Check left
-        if((x - 1) >= 0):
-            legal_moves.append(3)  # add left to legal moves
+        if((x - 1) >= 0):  # hitting wall?
+            if (self.room_state[x - 1][y] != 100):  # hitting furniture?
+                legal_moves.append(3)  # add left to legal moves
 
         # Check right
-        if ((x + 1) <= (self.room_width - 1)):
-            legal_moves.append(1)  # add right to legal moves
+        if ((x + 1) <= (self.room_width - 1)):  # hitting wall?
+            if(self.room_state[x + 1][y] != 100):  # hitting furniture?
+                legal_moves.append(1)  # add right to legal moves
         # check up
-        if ((y - 1) >= 0):
-            legal_moves.append(0)  # add up to legal moves
+        if ((y - 1) >= 0):  # hitting wall?
+            if(self.room_state[x][y + 1] != 100):  # hitting furniture?
+                legal_moves.append(0)  # add up to legal moves
         # check down
-        if ((y + 1) <= (self.room_height - 1)):
-            legal_moves.append(2)  # add down to legal moves
+        if ((y + 1) <= (self.room_height - 1)):  # hitting wall?
+            if(self.room_state[x + 1][y] != 100):  # hitting furniture?
+                legal_moves.append(2)  # add down to legal moves
 
         return legal_moves
 
