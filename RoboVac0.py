@@ -13,6 +13,7 @@ import math
 import numpy as np
 from queue import PriorityQueue
 import copy
+from collections import defaultdict
 
 class RoboVac:
     def __init__(self, config_list, clean_set):
@@ -25,9 +26,11 @@ class RoboVac:
         self.unvisited_list = []
         self.start_corner_found = False
         self.last_move = None
+        self.move_list = []
+        self.path = []
 
 
-        # test purposes - highlight robot position
+        # # test purposes - highlight robot position
         y, x = self.pos
         self.room_state[x][y] = 99
 
@@ -75,9 +78,10 @@ class RoboVac:
         left = 3
         right = 1
 
-        move_list = self.next_move_manhat(self.room_state)
-        next_move = 0
-
+        move_board_set = self.next_move_manhat(self.room_state)
+        next_move, next_board = move_board_set.pop(0)
+        if(next_move == -1):
+            next_move, next_board = move_board_set.pop(0)
 
         return next_move
 
@@ -92,35 +96,53 @@ class RoboVac:
         """
         possible_moves = PriorityQueue()
 
-        queue = [[board]]
+        # queue should support a move and a board
+        queue = [[(-1, board)]]  # move, board
+        move_list = []
 
         # Kick off BFS (Manhattan)
         while queue:
-            path = queue.pop(0)
-            vertex = path[len(path) - 1]
+            path = queue.pop(0)  # may be a list of tuples
+            target_tuple = path[len(path) - 1]
+            target_move, vertex = target_tuple
 
             child_boards = self.get_child_boards_list(vertex, self.pos)
 
-            # need to figure out how best to unpack tuples into a list
+            # # need to figure out how best to unpack tuples into a list
+            # moves = []
+            # possible_boards = []
+            # for idx, tuples in enumerate(child_boards[str(vertex)]):
+            #     move, possible_board = tuples
+            #     moves.append(move)
+            #     possible_boards.append(possible_board)
 
-            next_node_list = [x for x in child_boards[str(vertex)]
-                              if str(x) not in set(str(path))]
+
+            # next_node_list = [x for x in child_boards[str(vertex)]
+            #                   if str(x) not in set(str(path))]
+
+            next_node_list = []
+            for idx, tuples in enumerate(child_boards[str(vertex)]):
+                move, possible_board = tuples
+                if str(possible_board) not in set(str(path)):
+                    next_node_list.append(tuples)
+
 
             # Create Manhattan Distance Priority Queue
-            for node in next_node_list:
+            for tuples in next_node_list:
+                move, node = tuples
                 manhattan_sum = self.manhattan_dist(node,
                                                     self.goal_state)
-                possible_moves.put((manhattan_sum, node))
+                possible_moves.put((manhattan_sum, move, node))
 
             # Visit the Children in our Priority Queue
             while not (possible_moves.empty()):
-                priority, next_node = possible_moves.get()
+                priority, move, next_node = possible_moves.get()
 
                 # Check for victory conditions or append path with node
-                if next_node == self.goal_state:
-                    return [path + [next_node]]
+                if str(next_node) == str(self.goal_state):
+                    return [path + [(move, [next_node])]]
                 else:
-                    queue.append(path + [next_node])
+                    queue.append(path + [(move, [next_node])])
 
     def manhattan_dist(self, board, goal):
         """
@@ -186,7 +208,7 @@ class RoboVac:
         :return: A list of ALL possible child boards of the parent
         """
 
-        list_of_child_boards = {}
+        list_of_child_boards = defaultdict(list)
         up = 0
         down = 2
         left = 3
@@ -200,45 +222,33 @@ class RoboVac:
         legal_moves = self.legal_move_check(current_pos)
         if(up in legal_moves):
             up_board[row - 1][col] = 1
-            up_tup = (up_board, up)  # to return move with board
+            up_tup = (up, up_board)  # to return move with board
             # add up_board to the list of children
-            if str(board) in list_of_child_boards.keys():
-                list_of_child_boards[str(board)].append(up_tup)
-            else:
-                list_of_child_boards[str(board)] = up_tup
+            list_of_child_boards[str(board)].append(up_tup)
 
         # determine if we can move down (Zero not in top row)
         down_board = copy.deepcopy(board)
         if(down in legal_moves):
             down_board[row + 1][col] = 1
-            down_tup = (down_board, down)
+            down_tup = (down, down_board)
             # add down_board to the list of children
-            if str(board) in list_of_child_boards.keys():
-                list_of_child_boards[str(board)].append(down_tup)
-            else:
-                list_of_child_boards[str(board)] = down_tup
+            list_of_child_boards[str(board)].append(down_tup)
 
         # determine if we can move left (Zero cannot be in last column)
         left_board = copy.deepcopy(board)
         if(left in legal_moves):
             left_board[row][col - 1] = 1
-            left_tup = (left_board, left)
+            left_tup = (left, left_board)
             # add left_board to the list of children
-            if str(board) in list_of_child_boards.keys():
-                list_of_child_boards[str(board)].append(left_tup)
-            else:
-                list_of_child_boards[str(board)] = left_tup
+            list_of_child_boards[str(board)].append(left_tup)
 
         # determine if we can move right (Zero cannot be in first column)
         right_board = copy.deepcopy(board)
         if(right in legal_moves):
             right_board[row][col + 1] = 1
-            right_tup = (right_board, right)
+            right_tup = (right, right_board)
             # add right_board to the list of children
-            if str(board) in list_of_child_boards.keys():
-                list_of_child_boards[str(board)].append(right_tup)
-            else:
-                list_of_child_boards[str(board)] = right_tup
+            list_of_child_boards[str(board)].append(right_tup)
 
         return list_of_child_boards
 
@@ -279,6 +289,7 @@ class RoboVac:
         """
         legal_moves = []
         x, y = current_pos
+        # check for board bounds
         # Check left
         if((x - 1) >= 0):  # hitting wall?
             if (self.room_state[x - 1][y] != 100):  # hitting furniture?
@@ -290,11 +301,11 @@ class RoboVac:
                 legal_moves.append(1)  # add right to legal moves
         # check up
         if ((y - 1) >= 0):  # hitting wall?
-            if(self.room_state[x][y + 1] != 100):  # hitting furniture?
+            if(self.room_state[x][y - 1] != 100):  # hitting furniture?
                 legal_moves.append(0)  # add up to legal moves
         # check down
         if ((y + 1) <= (self.room_height - 1)):  # hitting wall?
-            if(self.room_state[x + 1][y] != 100):  # hitting furniture?
+            if(self.room_state[x][y + 1] != 100):  # hitting furniture?
                 legal_moves.append(2)  # add down to legal moves
 
         return legal_moves
