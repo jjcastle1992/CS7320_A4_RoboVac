@@ -83,7 +83,14 @@ class RoboVac:
         self.pos = current_pos
         # next_move = self.next_move_manhat(self.room_state)
 
-        next_move = self.next_move_manhat_coord(current_pos)
+        next_move_path = self.next_move_manhat_coord(current_pos)
+        next_move_coord = next_move_path.pop(1)   # 1 = next move
+        pos_diff = current_pos - next_move_coord  # row, col
+
+        # position diff will equal some next move (0, 1) = up
+        if(pos_diff == (0, 1)):
+            next_move = up
+        print('woot')
 
         return next_move
 
@@ -116,52 +123,67 @@ class RoboVac:
                 else:
                     all_low_cost = True
 
-        print('k')
-        # what's the path to get there?
+        # what's the path to get to the lowest cost items?
+        while(lowest_cost_dest):
+            goal_node = lowest_cost_dest.pop(0)
+            queue = [[current_pos]]
+
+            # make a queue, build path, until you get to destination(goal)
+            while(queue):
+                path = queue.pop(0)
+                vertex = path[len(path) - 1]
+                # get child nodes
+                child_nodes = self.get_child_nodes(vertex)
+                print('child nodes generated')
+
+                # check if child node is goal node
+                    # if yes, return path + current coords
+                    # else, append path + current_coords to queue
+
+
+        # find path with lowest sum (cost)
 
         # return first move in that path
 
-
-    def next_move_manhat(self, board):
+    def get_child_nodes(self, start_node):
         """
-        Method returns ordered list of cleaning steps as a list of
-        boards.
-        :param board: 2d list of ints containing current game board
-        :return: list of game moves to cleaned room.
+        Generate a list of child node coordinates based on a given start
+        node.
+        :param start_node: tuple of 2 ints indicating row,col coords of
+        a start note
+        :return: a list of tuples for all legal moves.
         """
-        possible_moves = PriorityQueue()
+        up = 0
+        down = 2
+        left = 3
+        right = 1
+        child_nodes = []
+        # check for legal moves
+        legal_moves = self.legal_move_check(start_node)
+        start_row, start_col = start_node
 
-        # queue should support a move and a board
-        queue = [[(-1, board)]]  # move, board
-        move_list = []
+        for move in legal_moves:
+            # case if up
+            if(move == up):
+                up_coor = ((start_row - 1), start_col)
+                child_nodes.append(up_coor)
+            # case if down
+            elif(move == down):
+                down_coor = ((start_row + 1), start_col)
+                child_nodes.append(down_coor)
+            # case if left
+            elif(move == left):
+                left_coor = (start_row, (start_col - 1))
+                child_nodes.append(left_coor)
+            # case if right
+            elif(move == right):
+                right_coor = (start_row, (start_col + 1))
+                child_nodes.append(right_coor)
+            else:
+                print('ERROR: NO LEGAL MOVES!')
 
-        # Kick off BFS (Manhattan)
-        while queue:
-            path = queue.pop(0)  # may be a list of tuples
-            target_tuple = path[len(path) - 1]
-            target_move, vertex = target_tuple
-
-            child_boards = self.get_child_boards_list(vertex, self.pos)
-
-            next_node_list = []
-            for idx, tuples in enumerate(child_boards[str(vertex)]):
-                move, possible_board = tuples
-                if str(possible_board) not in set(str(path)):
-                    next_node_list.append(tuples)
-
-            # Create Manhattan Distance Priority Queue
-            for tuples in next_node_list:
-                move, node = tuples
-                manhattan_sum = self.manhattan_dist(node)
-                possible_moves.put((manhattan_sum, move, node))
-
-            # Visit the Children in our Priority Queue
-            while not (possible_moves.empty()):
-                priority, move, next_node = possible_moves.get()
-                self.room_state = next_node
-
-                # Check for victory conditions or append path with node
-                return move
+        # return list of child nodes
+        return child_nodes
 
     def manhattan_dist(self, current_pos, dest_pos):
         """
@@ -176,60 +198,6 @@ class RoboVac:
                                                          curr_col))
 
         return manhattan_dist
-
-    def get_child_boards_list(self, board, current_pos):
-        """
-        This function gets ALL child boards for a given parent board
-        :param board: 2d list of ints - A game board (RxC) matrix
-        :param current_pos: tuple consisting of x,y coordinate position
-        of robot.
-        :return: A list of ALL possible child boards of the parent
-        """
-
-        list_of_child_boards = defaultdict(list)
-        up = 0
-        down = 2
-        left = 3
-        right = 1
-        col, row = current_pos
-
-        # determine if we can move up (Zero not in bottom Row)
-        up_board = copy.deepcopy(board)
-
-        # not 1 move up away from a block (edge of board or furniture)
-        legal_moves = self.legal_move_check(current_pos)
-        if(up in legal_moves):
-            up_board[row - 1][col] = 1
-            up_tup = (up, up_board)  # to return move with board
-            # add up_board to the list of children
-            list_of_child_boards[str(board)].append(up_tup)
-
-        # determine if we can move down (Zero not in top row)
-        down_board = copy.deepcopy(board)
-        if(down in legal_moves):
-            down_board[row + 1][col] = 1
-            down_tup = (down, down_board)
-            # add down_board to the list of children
-            list_of_child_boards[str(board)].append(down_tup)
-
-        # determine if we can move left (Zero cannot be in last column)
-        left_board = copy.deepcopy(board)
-        if(left in legal_moves):
-            left_board[row][col - 1] = 1
-            left_tup = (left, left_board)
-            # add left_board to the list of children
-            list_of_child_boards[str(board)].append(left_tup)
-
-        # determine if we can move right (Zero cannot be in first column)
-        right_board = copy.deepcopy(board)
-        if(right in legal_moves):
-            right_board[row][col + 1] = 1
-            right_tup = (right, right_board)
-            # add right_board to the list of children
-            list_of_child_boards[str(board)].append(right_tup)
-
-        return list_of_child_boards
-
 
     def build_frontier(self):
         """
@@ -304,98 +272,3 @@ class RoboVac:
                 legal_moves.append(2)  # add down to legal moves
 
         return legal_moves
-
-    def at_corner(self, current_pos):
-        """
-        Determines if we are at a corner
-        :param current_pos: tuple consisting of x,y coordinate position
-        of robot.
-        :return: bool in_corner. True if already in a corner. False if
-        not.
-        """
-        in_corner = False
-        # Possible Corners (x, y)
-        top_left = (0, 0)
-        top_right = (self.room_width - 1, 0)
-        bot_left = (0, self.room_height - 1)
-        bot_right = (self.room_width - 1, self.room_height - 1)
-        corner_list = [top_left, top_right, bot_left, bot_right]
-        for corners in corner_list:
-            if corners == current_pos:
-                in_corner = True
-
-        return in_corner
-
-    def find_corner(self, current_pos):
-        """
-        Finds nearest corner when we're not in already in the corner.
-        :param current_pos: tuple consisting of x,y coordinate position
-        of robot.
-        :return: next move
-        """
-
-        # Possible Corners (x, y)
-        top_left = (0, 0)
-        top_right = (self.room_width - 1, 0)
-        bot_left = (0, self.room_height - 1)
-        bot_right = (self.room_width - 1, self.room_height - 1)
-        corner_list = [top_left, top_right, bot_left, bot_right]
-
-        # Use Euclidean Distance to determine nearest corner
-        # Corner - Position
-        tl_euclid_dist = self.euclidean_distance(top_left, current_pos)
-        tr_euclid_dist = self.euclidean_distance(top_right, current_pos)
-        bl_euclid_dist = self.euclidean_distance(bot_left, current_pos)
-        br_euclid_dist = self.euclidean_distance(bot_right, current_pos)
-        possible_corners = [tl_euclid_dist, tr_euclid_dist,
-                            bl_euclid_dist, br_euclid_dist]
-        closest_corner = math.inf
-        # find shortest distance
-        corner_idx = 0
-        for idx, corners in enumerate(possible_corners):
-            if corners < closest_corner:
-                closest_corner = corners
-                corner_idx = idx
-
-        corner_coord = corner_list[corner_idx]
-        # determine x dist, y dist, to sort moves from current pos
-        # -> corner.
-        moves_needed = tuple(map(lambda i, j: i - j, corner_coord,
-                                 current_pos))
-        horz_moves, vert_moves = moves_needed
-
-        if (vert_moves < 0):
-            vert_move = 0  # go up
-        else:
-            vert_move = 2  # go down
-
-        if(horz_moves < 0):
-            horz_move = 3  # go left
-        else:
-            horz_move = 1  # go right
-
-        if (vert_moves == 0):
-            next_move = horz_move
-        elif (horz_moves == 0):
-            next_move = vert_move
-        else:
-            if(abs(vert_moves) < abs(horz_moves)):
-                next_move = vert_move
-            else:
-                next_move = horz_move
-
-        return next_move
-
-    def euclidean_distance(self, ref_coords, current_pos):
-        """
-        Calculates the Euclidean distance from the corner position to
-        the passed in reference position
-        :param ref_coords: tuple of x, y coordinates as ints for the
-        ref. position (e.g. corner, nearest wall, object, etc.)
-        :param current_pos: tuple of x, y ccoordinates as ints.
-        :return: Euclidean distance as a float.
-        """
-        euclid_dist = (((ref_coords[0] - current_pos[0]) ** 2) +
-                       ((ref_coords[1] - current_pos[1]) ** 2)) ** 0.5
-
-        return euclid_dist
