@@ -81,10 +81,45 @@ class RoboVac:
         left = 3
         right = 1
         self.pos = current_pos
-        next_move = self.next_move_manhat(self.room_state)
+        # next_move = self.next_move_manhat(self.room_state)
+
+        next_move = self.next_move_manhat_coord(current_pos)
 
         return next_move
 
+
+    def next_move_manhat_coord(self, current_pos):
+
+        # where we are
+
+        # what is our frontier
+        frontier_list = self.frontier_list
+
+        # what's the closest unvisited node in frontier?
+        frontier_dist = PriorityQueue()
+        for fr_coords in frontier_list:
+            manhattan_dist = self.manhattan_dist(current_pos, fr_coords)
+            frontier_dist.put((manhattan_dist, fr_coords))
+
+        # Build a list of all items in the PriorityQueue of lowest cost
+        lowest_cost_dest = []
+        all_low_cost = False
+        if(frontier_dist.not_empty):
+            item = frontier_dist.get()
+            priority, coordinates = item
+            lowest_cost_dest.append(coordinates)
+            while(frontier_dist.not_empty and all_low_cost == False):
+                next_item = frontier_dist.get()
+                next_priority, next_coord = next_item
+                if(next_priority == priority):
+                    lowest_cost_dest.append(next_coord)
+                else:
+                    all_low_cost = True
+
+        print('k')
+        # what's the path to get there?
+
+        # return first move in that path
 
 
     def next_move_manhat(self, board):
@@ -117,8 +152,7 @@ class RoboVac:
             # Create Manhattan Distance Priority Queue
             for tuples in next_node_list:
                 move, node = tuples
-                manhattan_sum = self.manhattan_dist(self.room_state,
-                                                   node)
+                manhattan_sum = self.manhattan_dist(node)
                 possible_moves.put((manhattan_sum, move, node))
 
             # Visit the Children in our Priority Queue
@@ -129,64 +163,19 @@ class RoboVac:
                 # Check for victory conditions or append path with node
                 return move
 
-    def manhattan_dist(self, board, goal):
+    def manhattan_dist(self, current_pos, dest_pos):
         """
-        This function calculates the Manhattan Sum for a given board
-        based on the variance in tile distance of the current board vs
-        the goal board.
-        :param board: 2d list of ints containing the board to give a
-        Manhattan sum.
-        :param goal: 2d list of ints containing goal state game board
-        :return: float that is the sum of all Manhattan distances for
-        the target board vs goal board
+        This function calculates the Manhattan Sum based on where we are
+        and where we want to go
         """
-        manhattan_sum = 0.0
-        # customizing in-case goal board is not 1, 2, 3, 4...etc.
 
-        # NEED TO FIGURE OUT MANHATTAN SUM CALC SO IT ACTUALLY HELPS PREDICT BEST ROUTE*******
+        curr_row, curr_col = current_pos
+        dest_row, dest_col = dest_pos
 
-        # try having it look for the closest unvisited node
+        manhattan_dist = (abs(dest_row - curr_row) + abs(dest_col -
+                                                         curr_col))
 
-        # Calculate our Manhattan Sum
-        for row_idx, row in enumerate(goal):
-            for col_idx, element in enumerate(row):
-                current_target = goal[row_idx][col_idx]
-                board_coord, goal_coord = self.coordinate_finder(
-                    current_target,
-                    board, goal)
-                x1, y1 = board_coord
-                x2, y2 = goal_coord
-                manhattan_dist = (abs(x1 - x2) + abs(y1 - y2))
-                manhattan_sum += manhattan_dist
-
-        return manhattan_sum
-
-    def coordinate_finder(self, target_val, current_board, goal_board):
-        """
-        Finds coordinates of a target value (int) in 2 boards:
-            1. Current Board
-            2. Goal Board
-        :param target_val: int to search for in the current and goal boards
-        :param current_board: 2d list of ints containing the current board
-        :param goal_board: 2d list of ints containing the goal board
-        :return: tuple containing 2 ints
-        """
-        current_board_coords = (-1, -1)
-        goal_board_coords = (-1, -1)
-
-        # find current board coordinates for the target value
-        for row_idx, row in enumerate(current_board):
-            for col_idx, element in enumerate(row):
-                if element == target_val:
-                    current_board_coords = (row_idx, col_idx)
-
-        # find goal board coordinates for the target value
-        for row_idx, row in enumerate(goal_board):
-            for col_idx, element in enumerate(row):
-                if element == target_val:
-                    goal_board_coords = (row_idx, col_idx)
-
-        return current_board_coords, goal_board_coords
+        return manhattan_dist
 
     def get_child_boards_list(self, board, current_pos):
         """
