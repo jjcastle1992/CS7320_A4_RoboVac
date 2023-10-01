@@ -23,7 +23,7 @@ class RoboVac:
         self.pos = config_list[1]  # starting position of vacuum
         self.block_list = config_list[2]   # blocks list (x,y,width,ht)
         self.explored_list = clean_set
-        self.unvisited_list = []
+        self.frontier_list = []  # our frontier
         self.start_corner_found = False
         self.last_move = None
         self.move_list = []
@@ -32,7 +32,7 @@ class RoboVac:
 
         # # test purposes - highlight robot position
         y, x = self.pos
-        self.room_state[x][y] = 99
+        self.room_state[x][y] = 1
 
 
         # fill in with your info
@@ -41,6 +41,9 @@ class RoboVac:
 
         # generate goal state
         self.place_furniture()
+
+        # generate starting frontier
+        self.build_frontier()
 
     def place_furniture(self):
         """Method sets value for any furniture in the block list on the
@@ -77,11 +80,8 @@ class RoboVac:
         down = 2
         left = 3
         right = 1
-
-        move_board_set = self.next_move_manhat(self.room_state)
-        next_move, next_board = move_board_set.pop(0)
-        if(next_move == -1):
-            next_move, next_board = move_board_set.pop(0)
+        self.pos = current_pos
+        next_move = self.next_move_manhat(self.room_state)
 
         return next_move
 
@@ -108,41 +108,26 @@ class RoboVac:
 
             child_boards = self.get_child_boards_list(vertex, self.pos)
 
-            # # need to figure out how best to unpack tuples into a list
-            # moves = []
-            # possible_boards = []
-            # for idx, tuples in enumerate(child_boards[str(vertex)]):
-            #     move, possible_board = tuples
-            #     moves.append(move)
-            #     possible_boards.append(possible_board)
-
-
-            # next_node_list = [x for x in child_boards[str(vertex)]
-            #                   if str(x) not in set(str(path))]
-
             next_node_list = []
             for idx, tuples in enumerate(child_boards[str(vertex)]):
                 move, possible_board = tuples
                 if str(possible_board) not in set(str(path)):
                     next_node_list.append(tuples)
 
-
             # Create Manhattan Distance Priority Queue
             for tuples in next_node_list:
                 move, node = tuples
-                manhattan_sum = self.manhattan_dist(node,
-                                                    self.goal_state)
+                manhattan_sum = self.manhattan_dist(self.room_state,
+                                                   node)
                 possible_moves.put((manhattan_sum, move, node))
 
             # Visit the Children in our Priority Queue
             while not (possible_moves.empty()):
                 priority, move, next_node = possible_moves.get()
+                self.room_state = next_node
 
                 # Check for victory conditions or append path with node
-                if str(next_node) == str(self.goal_state):
-                    return [path + [(move, [next_node])]]
-                else:
-                    queue.append(path + [(move, [next_node])])
+                return move
 
     def manhattan_dist(self, board, goal):
         """
@@ -157,6 +142,10 @@ class RoboVac:
         """
         manhattan_sum = 0.0
         # customizing in-case goal board is not 1, 2, 3, 4...etc.
+
+        # NEED TO FIGURE OUT MANHATTAN SUM CALC SO IT ACTUALLY HELPS PREDICT BEST ROUTE*******
+
+        # try having it look for the closest unvisited node
 
         # Calculate our Manhattan Sum
         for row_idx, row in enumerate(goal):
@@ -251,6 +240,23 @@ class RoboVac:
             list_of_child_boards[str(board)].append(right_tup)
 
         return list_of_child_boards
+
+
+    def build_frontier(self):
+        """
+        Looks at all elements in the starting array that arent blocks
+        and builds a frontier list of all unvisited nodes to pop from.
+        :return: void method
+        """
+        room_start = self.room_state
+
+        # get coordinates of all elements in the array whose value is 0.
+        # coordinates in row, col format.
+
+        for row_idx, row in enumerate(room_start):
+            for col_idx, col in enumerate(row):
+                if (col == 0):
+                    self.frontier_list.append((row_idx, col_idx))
 
     def visited_before(self, current_position, legal_moves):
         """
