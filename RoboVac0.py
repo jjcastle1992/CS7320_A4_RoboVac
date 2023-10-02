@@ -133,7 +133,8 @@ class RoboVac:
             item = frontier_dist.get()
             priority, coordinates = item
             lowest_cost_dest.append(coordinates)
-            while(frontier_dist.not_empty and all_low_cost == False):
+            while((not frontier_dist.empty()) and
+                  (all_low_cost == False)):
                 next_item = frontier_dist.get()
                 next_priority, next_coord = next_item
                 if(next_priority == priority):
