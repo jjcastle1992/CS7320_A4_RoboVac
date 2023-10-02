@@ -80,7 +80,7 @@ class Room:
             x = random.randrange(dx, self.max_x)
             y = random.randrange(dy, self.max_y)
             intersect = self.does_pos_intersect_blocks((x, y))
-        self.vac_pos = (x, y)  # starting location for vacuum
+        self.vac_pos = (x,y)  # starting location for vacuum
 
         # define sets with positions as tuples; useful utilities
         self.clean_set = set()
@@ -243,7 +243,6 @@ def main(game_level):
 
     # GAME LOOP ---------
     while True:
-        print(f'move # {move_count}')
         if (move_count % 50)  == 0:
             print (f"Move Count: {move_count}")
 
@@ -257,13 +256,11 @@ def main(game_level):
 
                 f"--------------------------------------\n"
                 f"RESULTS ***** {result_str}\n"
-                  f"Room Dimensions: {robo_vac.room_width}w x "
-                  f"{robo_vac.room_height}h\n"
                   f"{robo_vac.name} ID={robo_vac.id} {get_date_time()}"
                   f"\nLevel: {room.game_level}  Coverage: "
                   f"{((len(room.clean_set)/room.max_tiles)*100):.1f}%\n"
                   f"Cycles: {move_count} Tiles Cleaned: "
-                  f"{len(room.clean_set)} Max Tiles: {room.max_tiles} "
+                  f"{len(room.clean_set)} Max Tiles: {room.max_tiles}"
                   f"Total Tiles {room.max_tiles}\n"
                   f"Efficiency: {(room.max_tiles/move_count):.2f}"
                   )
