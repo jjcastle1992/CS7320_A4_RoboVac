@@ -268,35 +268,8 @@ class RoboVac:
         for row_idx, row in enumerate(room_start):
             for col_idx, col in enumerate(row):
                 if (col == 0):
-                    self.frontier_list.append((col_idx, row_idx)) # x, y
+                    self.frontier_list.append((col_idx, row_idx))  # x, y
 
-    def visited_before(self, current_position, legal_moves):
-        """
-        Checks to see which legal moves result in re-tracing of steps
-        :param current_position:
-        :param legal_moves:
-        :return: A list of moves that result in step retracing.
-        """
-        x, y = current_position
-        up = (x, y - 1)
-        down = (x, y + 1)
-        left = (x - 1, y)
-        right = (x + 1, y)
-        repeat_moves = []
-        if(0 in legal_moves):  # check if Up has been visited
-            if(up in self.explored_list):
-                repeat_moves.append(0)
-        if(2 in legal_moves):  # check if Down has been visited
-            if(down in self.explored_list):
-                repeat_moves.append(2)
-        if(3 in legal_moves):  # check if Left has been visited
-            if(left in self.explored_list):
-                repeat_moves.append(3)
-        if(1 in legal_moves):  # check if Right has been visited
-            if(right in self.explored_list):
-                repeat_moves.append(1)
-
-        return repeat_moves
 
     def legal_move_check(self, current_pos):
         """
