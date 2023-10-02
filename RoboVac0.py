@@ -101,12 +101,14 @@ class RoboVac:
         else:
             print("ERROR in get_next_move: no move provided")
 
-        # pop next_move_coordinate from frontier_list
-        frontier_idx = self.frontier_list.index(next_move_coord)
-        self.frontier_list.pop(frontier_idx)
+        # if not in explored list, then pop next_move_coordinate from
+        # frontier_list
+        if(not next_move_coord in self.explored):
+            frontier_idx = self.frontier_list.index(next_move_coord)
+            self.frontier_list.pop(frontier_idx)
+            self.explored.append(next_move_coord)
         if(current_pos not in self.explored):
             self.explored.append(current_pos)
-        self.explored.append(next_move_coord)
 
         return next_move
 
@@ -142,11 +144,13 @@ class RoboVac:
         # what's the path to get to the lowest cost items?
         while(lowest_cost_dest):
             goal_node = lowest_cost_dest.pop(0)
-            queue = [[current_pos]]  # consider making priorityqueue
+            # queue = [[current_pos]]  # consider making priorityqueue
+            path_queue = PriorityQueue()
+            path_queue.put((0, [current_pos]))
 
             # make a queue, build path, until you get to destination(goal)
-            while(queue):
-                path = queue.pop(0)
+            while(not path_queue.empty()):
+                weight, path = path_queue.get()
                 vertex = path[len(path) - 1]
                 # get child nodes
                 child_nodes = self.get_child_nodes(vertex)
@@ -155,25 +159,35 @@ class RoboVac:
 
                 # Put children in PriorityQueue
                 for node in child_nodes:
-
                     node_priority = self.manhattan_dist(node, goal_node)
                     child_priority.put((node_priority, node))
 
+                min_priority = math.inf
                 # check if child node is goal node
                 while(not child_priority.empty()):
+                    alt_path = path
                     priority, node = child_priority.get()
                     if(node == goal_node):
                         manhattan_sum = 0
                         path = (path + [node])
                         # if yes, get path cost + add to priorityQueue
-                        for item in path[1:]:  # skip where we are
+                        for item in path:
                             dist = self.manhattan_dist(item, goal_node)
                             manhattan_sum += dist
                         viable_paths.put((manhattan_sum, path))
                         break
                     else:
                         # put logic in to only include paths with low min sums
-                        queue.append(path + [node])
+                        alt_path = alt_path + [node]
+                        manhattan_sum = 0
+                        for item in alt_path:
+                            dist = self.manhattan_dist(item, goal_node)
+                            manhattan_sum += dist
+                        if(manhattan_sum < min_priority):
+                            min_priority = manhattan_sum
+                            path_queue.put((manhattan_sum, alt_path))
+
+
 
         # find path with lowest sum (cost)
         cost, lowest_path = viable_paths.get()
