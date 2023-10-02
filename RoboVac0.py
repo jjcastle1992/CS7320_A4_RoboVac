@@ -303,23 +303,28 @@ class RoboVac:
         """
         legal_moves = []
         x, y = current_pos
-        # check for board bounds
+
+
+        # check for board bounds. NOTE room_state is [row][col] format.
         # Check left
         if((x - 1) >= 0):  # hitting wall?
-            if (self.room_state[x - 1][y] != 100):  # hitting furniture?
+            if (self.room_state[y][x - 1] != 100):  # hitting furniture?
                 legal_moves.append(3)  # add left to legal moves
-
+                # self.room_state[y][x -1] = 55 # test
         # Check right
         if ((x + 1) <= (self.room_width - 1)):  # hitting wall?
-            if(self.room_state[x + 1][y] != 100):  # hitting furniture?
+            if(self.room_state[y][x + 1] != 100):  # hitting furniture?
                 legal_moves.append(1)  # add right to legal moves
+                # self.room_state[y][x + 1] = 66  # test
         # check up
         if ((y - 1) >= 0):  # hitting wall?
-            if(self.room_state[x][y - 1] != 100):  # hitting furniture?
+            if(self.room_state[y - 1][x] != 100):  # hitting furniture?
                 legal_moves.append(0)  # add up to legal moves
+                # self.room_state[y - 1][x] = 77  # test
         # check down
         if ((y + 1) <= (self.room_height - 1)):  # hitting wall?
-            if(self.room_state[x][y + 1] != 100):  # hitting furniture?
+            if(self.room_state[y + 1][x] != 100):  # hitting furniture?
                 legal_moves.append(2)  # add down to legal moves
+                # self.room_state[y + 1][x] = 88  # test
 
         return legal_moves
