@@ -80,7 +80,7 @@ class Room:
             x = random.randrange(dx, self.max_x)
             y = random.randrange(dy, self.max_y)
             intersect = self.does_pos_intersect_blocks((x, y))
-        self.vac_pos = (x,y)  # starting location for vacuum
+        self.vac_pos = (x, y)  # starting location for vacuum
 
         # define sets with positions as tuples; useful utilities
         self.clean_set = set()
@@ -222,7 +222,7 @@ def main(game_level):
 
     # create the Robot Vacuum AI : pass in configuration
     config_list = room.get_room_config()
-    robo_vac = RoboVac(config_list, room.clean_set)
+    robo_vac = RoboVac(config_list)
 
     # set up the screen display ----------------
     SCREEN = pygame.display.set_mode((room.window_width, \
@@ -243,6 +243,7 @@ def main(game_level):
 
     # GAME LOOP ---------
     while True:
+        print(f'move # {move_count}')
         if (move_count % 50)  == 0:
             print (f"Move Count: {move_count}")
 
