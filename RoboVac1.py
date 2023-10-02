@@ -22,10 +22,9 @@ class RoboVac:
         self.block_list = config_list[2]   # blocks list (x,y,width,ht)
         self.frontier_list = []  # our frontier
         self.explored = []  # testing purposes
-        self.start_corner_found = False
-        self.last_move = None
         self.move_list = []
         self.path = []
+        self.furniture_coords = []
 
 
         # # test purposes - highlight robot position
@@ -53,20 +52,19 @@ class RoboVac:
             # get furniture dims
             x, y, width, height = furniture
             # set board pieces in range to 100 (blocked)
-            self.room_state[x][y] = 100
-            for blocks in range(width):
-                for cubes in range(height):
-                    self.room_state[x + cubes][y + blocks] = 100
+            for blocks in range(height):
+                for cubes in range(width):
+                    self.room_state[y + blocks][x + cubes] = 100
+                    self.furniture_coords.append((x + cubes, y + blocks))
 
         self.goal_state.astype(int)
         for furniture in self.block_list:
             # get furniture dims
             x, y, width, height = furniture
             # set board pieces in range to 100 (blocked)
-            self.goal_state[x][y] = 100
-            for blocks in range(width):
-                for cubes in range(height):
-                    self.goal_state[x + cubes][y + blocks] = 100
+            for blocks in range(height):
+                for cubes in range(width):
+                    self.goal_state[y + blocks][x + cubes] = 100
 
         print('Furniture placed')
 
@@ -79,11 +77,14 @@ class RoboVac:
         left = 3
         right = 1
 
- # **** NEED TO FIX (X, Y) INTERP (Current I'm looking for (R, C), but needs to be written for X, Y)
-        # next_move = self.next_move_manhat(self.room_state)
+        # check if frontier_list includes anything from blocklist
+        frontier_corrupt = False
+        if any(item in self.furniture_coords for item in self.frontier_list):
+            frontier_corrupt = True
+
 
         next_move_path = self.next_move_manhat_coord(current_pos)
-        next_move_coord = next_move_path.pop(1)   # 1 = next move
+        next_move_coord = next_move_path.pop(1)
         # subtract tuples from https://www.tutorialspoint.com/
         # how-to-get-subtraction-of-tuples-in-python
         pos_diff = tuple(map(lambda i, j: i - j,
@@ -310,19 +311,23 @@ class RoboVac:
         # check for board bounds. NOTE room_state is [row][col] format.
         # Check left
         if((x - 1) >= 0):  # hitting wall?
-            # if (self.room_state[y][x - 1] != 100):  # hitting furniture?
-            legal_moves.append(3)  # add left to legal moves
+            if (self.room_state[y][x - 1] != 100):  # hitting furniture?
+                legal_moves.append(3)  # add left to legal moves
+                # self.room_state[y][x -1] = 55 # test
         # Check right
         if ((x + 1) <= (self.room_width - 1)):  # hitting wall?
-            # if(self.room_state[y][x + 1] != 100):  # hitting furniture?
-            legal_moves.append(1)  # add right to legal moves
+            if(self.room_state[y][x + 1] != 100):  # hitting furniture?
+                legal_moves.append(1)  # add right to legal moves
+                # self.room_state[y][x + 1] = 66  # test
         # check up
         if ((y - 1) >= 0):  # hitting wall?
-            # if(self.room_state[y - 1][x] != 100):  # hitting furniture?
-            legal_moves.append(0)  # add up to legal moves
+            if(self.room_state[y - 1][x] != 100):  # hitting furniture?
+                legal_moves.append(0)  # add up to legal moves
+                # self.room_state[y - 1][x] = 77  # test
         # check down
         if ((y + 1) <= (self.room_height - 1)):  # hitting wall?
-            # if(self.room_state[y + 1][x] != 100):  # hitting furniture?
-            legal_moves.append(2)  # add down to legal moves
+            if(self.room_state[y + 1][x] != 100):  # hitting furniture?
+                legal_moves.append(2)  # add down to legal moves
+                # self.room_state[y + 1][x] = 88  # test
 
         return legal_moves
