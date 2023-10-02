@@ -242,11 +242,14 @@ class RoboVac:
         This function calculates the Manhattan Sum based on where we are
         and where we want to go
         """
-
+        manhattan_dist = 0
         curr_x, curr_y = current_pos
         dest_x, dest_y = dest_pos
-
-        manhattan_dist = (abs(dest_y - curr_y) + abs(dest_x - curr_x))
+        if(self.room_state[dest_y][dest_x] == 100):
+            manhattan_dist = 100
+        else:
+            manhattan_dist = (abs(dest_y - curr_y) +
+                              abs(dest_x - curr_x))
 
         return manhattan_dist
 
