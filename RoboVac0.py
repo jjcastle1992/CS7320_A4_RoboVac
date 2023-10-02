@@ -142,12 +142,11 @@ class RoboVac:
         # what's the path to get to the lowest cost items?
         while(lowest_cost_dest):
             goal_node = lowest_cost_dest.pop(0)
-            queue = [[current_pos]]
+            queue = [[current_pos]]  # consider making priorityqueue
 
             # make a queue, build path, until you get to destination(goal)
             while(queue):
                 path = queue.pop(0)
-                path_cost = 0
                 vertex = path[len(path) - 1]
                 # get child nodes
                 child_nodes = self.get_child_nodes(vertex)
@@ -161,7 +160,7 @@ class RoboVac:
                     child_priority.put((node_priority, node))
 
                 # check if child node is goal node
-                while(child_priority.not_empty):
+                while(not child_priority.empty()):
                     priority, node = child_priority.get()
                     if(node == goal_node):
                         manhattan_sum = 0
@@ -173,6 +172,7 @@ class RoboVac:
                         viable_paths.put((manhattan_sum, path))
                         break
                     else:
+                        # put logic in to only include paths with low min sums
                         queue.append(path + [node])
 
         # find path with lowest sum (cost)
