@@ -189,12 +189,15 @@ class RoboVac:
                         # put logic in to only include paths with low min sums
                         alt_path = alt_path + [node]
                         manhattan_sum = 0
-                        for item in alt_path:
-                            dist = self.manhattan_dist(item, goal_node)
-                            manhattan_sum += dist
-                        if(manhattan_sum < min_priority):
-                            min_priority = manhattan_sum
-                            path_queue.put((manhattan_sum, alt_path))
+                        # check for duplicate vaLues in path using set.
+                        set_len = len(set(alt_path))
+                        if ((len(alt_path)) == set_len):
+                            for item in alt_path:
+                                dist = self.manhattan_dist(item, goal_node)
+                                manhattan_sum += dist
+                            if(manhattan_sum < min_priority):
+                                min_priority = manhattan_sum
+                                path_queue.put((manhattan_sum, alt_path))
 
 
 
