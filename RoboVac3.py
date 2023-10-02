@@ -54,8 +54,12 @@ class RoboVac:
             # set board pieces in range to 100 (blocked)
             for blocks in range(height):
                 for cubes in range(width):
-                    self.room_state[y + blocks][x + cubes] = 100
-                    self.furniture_coords.append((x + cubes, y + blocks))
+                    # range check for furniture that might be past wall
+                    if(((y + blocks) < self.room_height) or
+                            (x + cubes < self.room_width)):
+                        self.room_state[y + blocks][x + cubes] = 100
+                        self.furniture_coords.append((x + cubes,
+                                                      y + blocks))
 
         self.goal_state.astype(int)
         for furniture in self.block_list:
@@ -64,7 +68,10 @@ class RoboVac:
             # set board pieces in range to 100 (blocked)
             for blocks in range(height):
                 for cubes in range(width):
-                    self.goal_state[y + blocks][x + cubes] = 100
+                    # range check for furniture that might be past wall
+                    if (((y + blocks) < self.room_height) or
+                            (x + cubes < self.room_width)):
+                        self.goal_state[y + blocks][x + cubes] = 100
 
         print('Furniture placed')
 
