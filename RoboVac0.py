@@ -12,18 +12,16 @@ import random
 import math
 import numpy as np
 from queue import PriorityQueue
-import copy
-from collections import defaultdict
 
 class RoboVac:
-    def __init__(self, config_list, clean_set):
+    def __init__(self, config_list):
         self.room_width, self.room_height = config_list[0]
         self.room_state = np.zeros((self.room_height, self.room_width))
         self.goal_state = np.ones((self.room_height, self.room_width))
         self.pos = config_list[1]  # starting position of vacuum
         self.block_list = config_list[2]   # blocks list (x,y,width,ht)
-        self.explored_list = clean_set
         self.frontier_list = []  # our frontier
+        self.explored = []  # testing purposes
         self.start_corner_found = False
         self.last_move = None
         self.move_list = []
@@ -80,23 +78,41 @@ class RoboVac:
         down = 2
         left = 3
         right = 1
-        self.pos = current_pos
+
+ # **** NEED TO FIX (X, Y) INTERP (Current I'm looking for (R, C), but needs to be written for X, Y)
         # next_move = self.next_move_manhat(self.room_state)
 
         next_move_path = self.next_move_manhat_coord(current_pos)
         next_move_coord = next_move_path.pop(1)   # 1 = next move
-        pos_diff = current_pos - next_move_coord  # row, col
+        # subtract tuples from https://www.tutorialspoint.com/
+        # how-to-get-subtraction-of-tuples-in-python
+        pos_diff = tuple(map(lambda i, j: i - j,
+                             next_move_coord, current_pos))
 
-        # position diff will equal some next move (0, 1) = up
-        if(pos_diff == (0, 1)):
+        # position diff will equal some next move (x, y) format
+        if(pos_diff == (-1, 0)):
+            next_move = left
+        elif (pos_diff == (1, 0)):
+            next_move = right
+        elif (pos_diff == (0, -1)):
             next_move = up
-        print('woot')
+        elif(pos_diff == (0, 1)):
+            next_move = down
+        else:
+            print("ERROR in get_next_move: no move provided")
+
+        # pop next_move_coordinate from frontier_list
+        frontier_idx = self.frontier_list.index(next_move_coord)
+        self.frontier_list.pop(frontier_idx)
+        if(current_pos not in self.explored):
+            self.explored.append(current_pos)
+        self.explored.append(next_move_coord)
 
         return next_move
 
 
     def next_move_manhat_coord(self, current_pos):
-
+        viable_paths = PriorityQueue()
         # where we are
 
         # what is our frontier
@@ -131,19 +147,40 @@ class RoboVac:
             # make a queue, build path, until you get to destination(goal)
             while(queue):
                 path = queue.pop(0)
+                path_cost = 0
                 vertex = path[len(path) - 1]
                 # get child nodes
                 child_nodes = self.get_child_nodes(vertex)
-                print('child nodes generated')
+                child_priority = PriorityQueue()
+
+
+                # Put children in PriorityQueue
+                for node in child_nodes:
+
+                    node_priority = self.manhattan_dist(node, goal_node)
+                    child_priority.put((node_priority, node))
 
                 # check if child node is goal node
-                    # if yes, return path + current coords
-                    # else, append path + current_coords to queue
-
+                while(child_priority.not_empty):
+                    priority, node = child_priority.get()
+                    if(node == goal_node):
+                        manhattan_sum = 0
+                        path = (path + [node])
+                        # if yes, get path cost + add to priorityQueue
+                        for item in path[1:]:  # skip where we are
+                            dist = self.manhattan_dist(item, goal_node)
+                            manhattan_sum += dist
+                        viable_paths.put((manhattan_sum, path))
+                        break
+                    else:
+                        queue.append(path + [node])
 
         # find path with lowest sum (cost)
+        cost, lowest_path = viable_paths.get()
 
-        # return first move in that path
+        # return lowest cost path
+        return lowest_path
+
 
     def get_child_nodes(self, start_node):
         """
@@ -160,24 +197,24 @@ class RoboVac:
         child_nodes = []
         # check for legal moves
         legal_moves = self.legal_move_check(start_node)
-        start_row, start_col = start_node
+        start_x, start_y = start_node
 
         for move in legal_moves:
             # case if up
             if(move == up):
-                up_coor = ((start_row - 1), start_col)
+                up_coor = (start_x, (start_y - 1))
                 child_nodes.append(up_coor)
             # case if down
             elif(move == down):
-                down_coor = ((start_row + 1), start_col)
+                down_coor = (start_x, (start_y + 1))
                 child_nodes.append(down_coor)
             # case if left
             elif(move == left):
-                left_coor = (start_row, (start_col - 1))
+                left_coor = ((start_x - 1), (start_y))
                 child_nodes.append(left_coor)
             # case if right
             elif(move == right):
-                right_coor = (start_row, (start_col + 1))
+                right_coor = ((start_x + 1), start_y)
                 child_nodes.append(right_coor)
             else:
                 print('ERROR: NO LEGAL MOVES!')
@@ -191,11 +228,10 @@ class RoboVac:
         and where we want to go
         """
 
-        curr_row, curr_col = current_pos
-        dest_row, dest_col = dest_pos
+        curr_x, curr_y = current_pos
+        dest_x, dest_y = dest_pos
 
-        manhattan_dist = (abs(dest_row - curr_row) + abs(dest_col -
-                                                         curr_col))
+        manhattan_dist = (abs(dest_y - curr_y) + abs(dest_x - curr_x))
 
         return manhattan_dist
 
@@ -213,7 +249,7 @@ class RoboVac:
         for row_idx, row in enumerate(room_start):
             for col_idx, col in enumerate(row):
                 if (col == 0):
-                    self.frontier_list.append((row_idx, col_idx))
+                    self.frontier_list.append((col_idx, row_idx)) # x, y
 
     def visited_before(self, current_position, legal_moves):
         """
