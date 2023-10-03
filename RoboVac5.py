@@ -1,4 +1,4 @@
-'''
+"""
 create robot vacuum that cleans all the floors of a grid.
 main creates an instance of RoboVac (your code) and provides:
 - grid size
@@ -7,34 +7,30 @@ main creates an instance of RoboVac (your code) and provides:
 
 goal: visit all tiles
 exec will : create instance and in game loop call : nextMove()  ??
-'''
-import random
+"""
 import math
 import numpy as np
 from queue import PriorityQueue
+
 
 class RoboVac:
     def __init__(self, config_list):
         self.room_width, self.room_height = config_list[0]
         self.room_state = np.zeros((self.room_height, self.room_width))
-        self.goal_state = np.ones((self.room_height, self.room_width))
         self.pos = config_list[1]  # starting position of vacuum
         self.block_list = config_list[2]   # blocks list (x,y,width,ht)
         self.frontier_list = []  # our frontier
         self.explored = []  # testing purposes
-        self.move_list = []
         self.path = []
         self.furniture_coords = []
-
-
-        # # test purposes - highlight robot position
-        y, x = self.pos
-        self.room_state[x][y] = 1
-
 
         # fill in with your info
         self.name = "James Castle"
         self.id = "29248132"
+
+        # set start position in room
+        y, x = self.pos
+        self.room_state[x][y] = 1
 
         # generate goal state
         self.place_furniture()
@@ -44,7 +40,7 @@ class RoboVac:
 
     def place_furniture(self):
         """Method sets value for any furniture in the block list on the
-        room_state and goal_state boards. Furniture weighted as 100.
+        room_state board. Furniture weighted as 100.
         :return: void function
         """
         self.room_state.astype(int)
@@ -61,20 +57,6 @@ class RoboVac:
                         self.furniture_coords.append((x + cubes,
                                                       y + blocks))
 
-        self.goal_state.astype(int)
-        for furniture in self.block_list:
-            # get furniture dims
-            x, y, width, height = furniture
-            # set board pieces in range to 100 (blocked)
-            for blocks in range(height):
-                for cubes in range(width):
-                    # range check for furniture that might be past wall
-                    if (((y + blocks) < self.room_height) and
-                            (x + cubes < self.room_width)):
-                        self.goal_state[y + blocks][x + cubes] = 100
-
-        print('Furniture placed')
-
     def get_next_move(self, current_pos):  # called by PyGame code
         # Return a direction for the vacuum to move
         # random walk 0=north # 1=east 2=south 3=west
@@ -85,9 +67,8 @@ class RoboVac:
         right = 1
 
         # check if frontier_list includes anything from blocklist
-        frontier_corrupt = False
-        if any(item in self.furniture_coords for item in self.frontier_list):
-            frontier_corrupt = True
+        if any(item in self.furniture_coords
+               for item in self.frontier_list):
             print('ERROR: CORRUPT FRONTIER with furniture in it')
 
         # Adapt to use Path memory.
@@ -132,7 +113,6 @@ class RoboVac:
 
         return next_move
 
-
     def next_move_manhat_coord(self, current_pos):
         viable_paths = PriorityQueue()
         max_viable_path_weight = math.inf
@@ -170,14 +150,13 @@ class RoboVac:
             path_queue = PriorityQueue()
             path_queue.put((0, [current_pos]))
 
-            # make a queue, build path, until you get to destination(goal)
+            # make a queue, build path, until you get to goal
             while((not path_queue.empty()) and (not stop_path_search)):
                 weight, path = path_queue.get()
                 vertex = path[len(path) - 1]
                 # get child nodes
                 child_nodes = self.get_child_nodes(vertex)
                 child_priority = PriorityQueue()
-
 
                 # Put children in PriorityQueue
                 for node in child_nodes:
@@ -203,33 +182,32 @@ class RoboVac:
                             stop_path_search = True
                         break
                     else:
-                        # put logic in to only include paths with low min sums
                         alt_path = alt_path + [node]
                         manhattan_sum = 0
                         # check for duplicate vaLues in path using set.
                         set_len = len(set(alt_path))
                         if ((len(alt_path)) == set_len):
                             for item in alt_path:
-                                dist = self.manhattan_dist(item, goal_node)
+                                dist = self.manhattan_dist(item,
+                                                           goal_node)
                                 manhattan_sum += dist
                             if(manhattan_sum <= min_priority):
                                 if(not viable_paths.empty()):
-                                    if(manhattan_sum < max_viable_path_weight):
+                                    if(manhattan_sum <
+                                            max_viable_path_weight):
                                         min_priority = manhattan_sum
-                                        path_queue.put((manhattan_sum, alt_path))
+                                        path_queue.put((manhattan_sum,
+                                                        alt_path))
                                 else:
                                     min_priority = manhattan_sum
                                     path_queue.put(
                                         (manhattan_sum, alt_path))
-
-
 
         # find path with lowest sum (cost)
         cost, lowest_path = viable_paths.get()
 
         # return lowest cost path
         return lowest_path
-
 
     def get_child_nodes(self, start_node):
         """
@@ -301,35 +279,7 @@ class RoboVac:
         for row_idx, row in enumerate(room_start):
             for col_idx, col in enumerate(row):
                 if (col == 0):
-                    self.frontier_list.append((col_idx, row_idx)) # x, y
-
-    def visited_before(self, current_position, legal_moves):
-        """
-        Checks to see which legal moves result in re-tracing of steps
-        :param current_position:
-        :param legal_moves:
-        :return: A list of moves that result in step retracing.
-        """
-        x, y = current_position
-        up = (x, y - 1)
-        down = (x, y + 1)
-        left = (x - 1, y)
-        right = (x + 1, y)
-        repeat_moves = []
-        if(0 in legal_moves):  # check if Up has been visited
-            if(up in self.explored_list):
-                repeat_moves.append(0)
-        if(2 in legal_moves):  # check if Down has been visited
-            if(down in self.explored_list):
-                repeat_moves.append(2)
-        if(3 in legal_moves):  # check if Left has been visited
-            if(left in self.explored_list):
-                repeat_moves.append(3)
-        if(1 in legal_moves):  # check if Right has been visited
-            if(right in self.explored_list):
-                repeat_moves.append(1)
-
-        return repeat_moves
+                    self.frontier_list.append((col_idx, row_idx))
 
     def legal_move_check(self, current_pos):
         """
