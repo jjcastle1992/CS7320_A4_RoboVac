@@ -20,7 +20,7 @@ class RoboVac:
         self.pos = config_list[1]  # starting position of vacuum
         self.block_list = config_list[2]   # blocks list (x,y,width,ht)
         self.frontier_list = []  # our frontier
-        self.explored = []  # testing purposes
+        self.explored = []  # tracking where we've been
         self.path = []
         self.furniture_coords = []
 
@@ -58,8 +58,13 @@ class RoboVac:
                                                       y + blocks))
 
     def get_next_move(self, current_pos):  # called by PyGame code
+        """
+        Generates the next move for the RoboVac
+        :param current_pos: tuple of ints (size 2) representing x, y
+        coordinates.
+        :return: Integer move choice between 0-3.
+        """
         # Return a direction for the vacuum to move
-        # random walk 0=north # 1=east 2=south 3=west
 
         up = 0
         down = 2
@@ -71,14 +76,18 @@ class RoboVac:
                for item in self.frontier_list):
             print('ERROR: CORRUPT FRONTIER with furniture in it')
 
-        # Adapt to use Path memory.
+        # Generate our next move
         next_move_coordinate = (-1, -1)  # DEBUG
 
+        # check to see if have a current path, and if not, make one.
         if(not self.path):  # path is empty
             next_move_path = self.next_move_manhat_coord(current_pos)
             self.path.append(next_move_path)
 
         current_path = self.path[0]
+
+        # Check to see if the root of our path is at the current pos.
+        # Pop if so, so next move will get us to a new location.
         if(current_path[0] == current_pos):
             current_path.pop(0)
         if(current_path):
@@ -103,25 +112,35 @@ class RoboVac:
             print("ERROR in get_next_move: no move provided")
 
         # if not in explored list, then pop next_move_coordinate from
-        # frontier_list
+        # frontier_list.
         if(not next_move_coord in self.explored):
             frontier_idx = self.frontier_list.index(next_move_coord)
             self.frontier_list.pop(frontier_idx)
             self.explored.append(next_move_coord)
+
+        # if not yet explored, add current pos to explored list
         if(current_pos not in self.explored):
             self.explored.append(current_pos)
 
         return next_move
 
     def next_move_manhat_coord(self, current_pos):
+        """
+        Generates our best move pathway using manhattan search heuristic
+        :param current_pos: tuple of ints (size 2) representing x, y
+        coordinates.
+        :return: list of tuples (size 2, type int) representing x,y
+        coordinates that form a path from our current location to the
+        closest viable unexplored node.
+        """
         viable_paths = PriorityQueue()
         max_viable_path_weight = math.inf
         stop_path_search = False
 
-        # what is our frontier
+        # setup local frontier
         frontier_list = self.frontier_list
 
-        # what's the closest unvisited node in frontier?
+        # Create list of closest unvisited nodes in frontier
         frontier_dist = PriorityQueue()
         for fr_coords in frontier_list:
             manhattan_dist = self.manhattan_dist(current_pos, fr_coords)
@@ -143,7 +162,7 @@ class RoboVac:
                 else:
                     all_low_cost = True
 
-        # what's the path to get to the lowest cost items?
+        # Build paths to the lowest cost destination
         while(lowest_cost_dest):
             goal_node = lowest_cost_dest.pop(0)
             # queue = [[current_pos]]  # consider making priorityqueue
@@ -253,6 +272,12 @@ class RoboVac:
         """
         This function calculates the Manhattan Sum based on where we are
         and where we want to go
+        :param current_pos: tuple of ints (size 2) representing x, y
+        coordinates.
+        :param dest_pos: tuple of ints (size 2) representing x, y
+        coordinates.
+        :return: int representing manhattan distance of the destination
+        and current position coordinates.
         """
         manhattan_dist = 0
         curr_x, curr_y = current_pos
