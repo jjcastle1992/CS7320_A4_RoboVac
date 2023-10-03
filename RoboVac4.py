@@ -88,10 +88,22 @@ class RoboVac:
         frontier_corrupt = False
         if any(item in self.furniture_coords for item in self.frontier_list):
             frontier_corrupt = True
+            print('ERROR: CORRUPT FRONTIER with furniture in it')
 
+        # Adapt to use Path memory.
+        next_move_coordinate = (-1, -1)  # DEBUG
 
-        next_move_path = self.next_move_manhat_coord(current_pos)
-        next_move_coord = next_move_path.pop(1)
+        if(not self.path):  # path is empty
+            next_move_path = self.next_move_manhat_coord(current_pos)
+            self.path.append(next_move_path)
+
+        current_path = self.path[0]
+        if(current_path[0] == current_pos):
+            current_path.pop(0)
+        if(current_path):
+            next_move_coord = current_path.pop(0)
+            if(not current_path):
+                self.path.pop()
         # subtract tuples from https://www.tutorialspoint.com/
         # how-to-get-subtraction-of-tuples-in-python
         pos_diff = tuple(map(lambda i, j: i - j,
