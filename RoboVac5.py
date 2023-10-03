@@ -55,7 +55,7 @@ class RoboVac:
             for blocks in range(height):
                 for cubes in range(width):
                     # range check for furniture that might be past wall
-                    if(((y + blocks) < self.room_height) or
+                    if(((y + blocks) < self.room_height) and
                             (x + cubes < self.room_width)):
                         self.room_state[y + blocks][x + cubes] = 100
                         self.furniture_coords.append((x + cubes,
@@ -69,7 +69,7 @@ class RoboVac:
             for blocks in range(height):
                 for cubes in range(width):
                     # range check for furniture that might be past wall
-                    if (((y + blocks) < self.room_height) or
+                    if (((y + blocks) < self.room_height) and
                             (x + cubes < self.room_width)):
                         self.goal_state[y + blocks][x + cubes] = 100
 
@@ -207,7 +207,7 @@ class RoboVac:
                             for item in alt_path:
                                 dist = self.manhattan_dist(item, goal_node)
                                 manhattan_sum += dist
-                            if(manhattan_sum < min_priority):
+                            if(manhattan_sum <= min_priority):
                                 min_priority = manhattan_sum
                                 path_queue.put((manhattan_sum, alt_path))
 
