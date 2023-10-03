@@ -135,7 +135,8 @@ class RoboVac:
 
     def next_move_manhat_coord(self, current_pos):
         viable_paths = PriorityQueue()
-        # where we are
+        max_viable_path_weight = math.inf
+        stop_path_search = False
 
         # what is our frontier
         frontier_list = self.frontier_list
@@ -170,7 +171,7 @@ class RoboVac:
             path_queue.put((0, [current_pos]))
 
             # make a queue, build path, until you get to destination(goal)
-            while(not path_queue.empty()):
+            while((not path_queue.empty()) and (not stop_path_search)):
                 weight, path = path_queue.get()
                 vertex = path[len(path) - 1]
                 # get child nodes
@@ -195,7 +196,11 @@ class RoboVac:
                         for item in path:
                             dist = self.manhattan_dist(item, goal_node)
                             manhattan_sum += dist
-                        viable_paths.put((manhattan_sum, path))
+                        if(manhattan_sum <= max_viable_path_weight):
+                            viable_paths.put((manhattan_sum, path))
+                            max_viable_path_weight = manhattan_sum
+                        else:
+                            stop_path_search = True
                         break
                     else:
                         # put logic in to only include paths with low min sums
