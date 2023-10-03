@@ -213,8 +213,14 @@ class RoboVac:
                                 dist = self.manhattan_dist(item, goal_node)
                                 manhattan_sum += dist
                             if(manhattan_sum <= min_priority):
-                                min_priority = manhattan_sum
-                                path_queue.put((manhattan_sum, alt_path))
+                                if(not viable_paths.empty()):
+                                    if(manhattan_sum < max_viable_path_weight):
+                                        min_priority = manhattan_sum
+                                        path_queue.put((manhattan_sum, alt_path))
+                                else:
+                                    min_priority = manhattan_sum
+                                    path_queue.put(
+                                        (manhattan_sum, alt_path))
 
 
 
